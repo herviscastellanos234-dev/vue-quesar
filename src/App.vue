@@ -196,15 +196,6 @@
                   </div>
                 </div>
 
-                <q-input
-                  v-model="formulario.fechaHora"
-                  label="Fecha y Hora de Recepción *"
-                  outlined
-                  dense
-                  placeholder="YYYY-MM-DD HH:mm"
-                  :rules="[val => (val && val.trim().length > 0) || 'La fecha y hora son obligatorias']"
-                />
-
                 <div class="row q-col-gutter-sm">
                   <div class="col-12 col-sm-6">
                     <q-input
@@ -326,7 +317,6 @@ const formulario = ref({
   equipo: '',
   tipoReparacion: '',
   tecnico: '',
-  fechaHora: '',
   precio: 0,
   metodoPago: '',
   estadoPago: '',
@@ -349,16 +339,17 @@ const opcionesMetodoPago = ['Efectivo', 'Transferencia', 'Tarjeta']
 const opcionesEstadoPago = ['Pagado', 'Pendiente', 'Abono']
 const opcionesEstadoEquipo = ['Recibido', 'En reparación', 'Listo para entregar', 'Entregado']
 
-function limpiarFormulario() {
+function obtenerFechaHoraActual() {
   const ahora = new Date()
-  const fechaTexto = ahora.toISOString().slice(0, 10) + ' ' + ahora.toTimeString().slice(0, 5)
+  return ahora.toISOString().slice(0, 10) + ' ' + ahora.toTimeString().slice(0, 5)
+}
 
+function limpiarFormulario() {
   formulario.value = {
     cliente: '',
     equipo: '',
     tipoReparacion: '',
     tecnico: '',
-    fechaHora: fechaTexto,
     precio: 0,
     metodoPago: 'Efectivo',
     estadoPago: 'Pendiente',
@@ -388,6 +379,7 @@ function guardarServicio() {
   if (modoEdicion.value) {
     servicios.value[indiceSeleccionado.value] = datosLimpios
   } else {
+    datosLimpios.fechaHora = obtenerFechaHoraActual()
     servicios.value.push(datosLimpios)
   }
   guardarEnLocalStorage()
