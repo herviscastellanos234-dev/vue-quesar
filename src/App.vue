@@ -458,8 +458,8 @@ function obtenerIconoEstadoPago(estado) {
 }
 
 .card-abono {
-  background-color: #c2b419;
-  border-color: #16cf78 !important;
+  background-color: #fffde7;
+  border-color: #fbc02d !important;
 }
 
 .card-pagado {
