@@ -19,7 +19,7 @@
               dense
               outlined
               bg-color="white"
-              placeholder="Buscar por cliente, equipo o técnico..."
+              placeholder="Buscar por cliente, marca, modelo o técnico..."
               clearable
             >
               <template v-slot:prepend>
@@ -75,8 +75,12 @@
                         {{ servicio.cliente }}
                       </div>
                       <div class="text-subtitle2 text-grey-9 row items-center q-gutter-xs">
+                        <q-icon name="branding_watermark" color="primary" size="18px" />
+                        <span><strong>Marca:</strong> {{ servicio.marca }}</span>
+                      </div>
+                      <div class="text-subtitle2 text-grey-9 row items-center q-gutter-xs">
                         <q-icon name="smartphone" color="primary" size="18px" />
-                        <span>{{ servicio.equipo }}</span>
+                        <span><strong>Modelo:</strong> {{ servicio.modelo }}</span>
                       </div>
                     </div>
                   </div>
@@ -118,9 +122,16 @@
                     </q-chip>
                   </div>
 
-                  <div class="q-mt-sm text-subtitle1 text-weight-bold">
-                    Cobro: ${{ servicio.precio }} 
-                    <span class="text-caption text-grey-7">({{ servicio.metodoPago }})</span>
+                  <div class="q-mt-sm bg-grey-2 q-pa-xs rounded-borders">
+                    <div class="text-subtitle2 text-weight-bold">
+                      Total: ${{ servicio.precio }} <span class="text-caption text-grey-7">({{ servicio.metodoPago }})</span>
+                    </div>
+                    <div class="text-caption text-positive text-weight-bold">
+                      Abonado: ${{ servicio.abono || 0 }}
+                    </div>
+                    <div class="text-caption text-negative text-weight-bold">
+                      Falta por pagar: ${{ calcularSaldoPendiente(servicio) }}
+                    </div>
                   </div>
 
                   <div v-if="servicio.observaciones" class="q-mt-sm bg-grey-3 q-pa-xs rounded-borders text-caption text-grey-9">
@@ -164,14 +175,28 @@
                   :rules="[val => (val && val.trim().length > 0) || 'El nombre del cliente es obligatorio']"
                 />
 
-                <q-input
-                  v-model="formulario.equipo"
-                  label="Marca y Modelo del Equipo *"
-                  outlined
-                  dense
-                  placeholder="Ej: iPhone 12, Samsung A15, Xiaomi Redmi Note 10"
-                  :rules="[val => (val && val.trim().length > 0) || 'La marca y modelo son obligatorios']"
-                />
+                <div class="row q-col-gutter-sm">
+                  <div class="col-12 col-sm-6">
+                    <q-input
+                      v-model="formulario.marca"
+                      label="Marca del Equipo *"
+                      outlined
+                      dense
+                      placeholder="Ej: Apple, Samsung, Xiaomi"
+                      :rules="[val => (val && val.trim().length > 0) || 'La marca es obligatoria']"
+                    />
+                  </div>
+                  <div class="col-12 col-sm-6">
+                    <q-input
+                      v-model="formulario.modelo"
+                      label="Modelo del Equipo *"
+                      outlined
+                      dense
+                      placeholder="Ej: iPhone 12, Galaxy A15, Redmi Note 10"
+                      :rules="[val => (val && val.trim().length > 0) || 'El modelo es obligatorio']"
+                    />
+                  </div>
+                </div>
 
                 <div class="row q-col-gutter-sm">
                   <div class="col-12 col-sm-6">
@@ -197,17 +222,41 @@
                 </div>
 
                 <div class="row q-col-gutter-sm">
-                  <div class="col-12 col-sm-6">
+                  <div class="col-12 col-sm-4">
                     <q-input
                       v-model.number="formulario.precio"
                       type="number"
-                      label="Precio Cobrado ($) *"
+                      label="Precio Total ($) *"
                       outlined
                       dense
                       :rules="[val => (val !== null && val !== '' && val >= 0) || 'Ingrese un precio válido']"
                     />
                   </div>
-                  <div class="col-12 col-sm-6">
+                  <div class="col-12 col-sm-4">
+                    <q-input
+                      v-model.number="formulario.abono"
+                      type="number"
+                      label="Abono ($)"
+                      outlined
+                      dense
+                      :rules="[val => (val === null || val === '' || val >= 0) || 'Abono inválido', val => val <= formulario.precio || 'El abono no puede superar el total']"
+                    />
+                  </div>
+                  <div class="col-12 col-sm-4">
+                    <q-input
+                      :model-value="formulario.precio - (formulario.abono || 0)"
+                      type="number"
+                      label="Falta por Pagar ($)"
+                      outlined
+                      dense
+                      readonly
+                      bg-color="grey-2"
+                    />
+                  </div>
+                </div>
+
+                <div class="row q-col-gutter-sm">
+                  <div class="col-12 col-sm-4">
                     <q-select
                       v-model="formulario.metodoPago"
                       :options="opcionesMetodoPago"
@@ -217,10 +266,7 @@
                       :rules="[val => !!val || 'Seleccione un método']"
                     />
                   </div>
-                </div>
-
-                <div class="row q-col-gutter-sm">
-                  <div class="col-12 col-sm-6">
+                  <div class="col-12 col-sm-4">
                     <q-select
                       v-model="formulario.estadoPago"
                       :options="opcionesEstadoPago"
@@ -230,7 +276,7 @@
                       :rules="[val => !!val || 'Seleccione estado del pago']"
                     />
                   </div>
-                  <div class="col-12 col-sm-6">
+                  <div class="col-12 col-sm-4">
                     <q-select
                       v-model="formulario.estadoEquipo"
                       :options="opcionesEstadoEquipo"
@@ -286,7 +332,7 @@
 <script setup>
 import { ref } from 'vue'
 
-const CLAVE_STORAGE = 'taller_don_efrain_servicios_v1'
+const CLAVE_STORAGE = 'taller_don_efrain_servicios_v2'
 
 function cargarDeLocalStorage() {
   const datosGuardados = localStorage.getItem(CLAVE_STORAGE)
@@ -314,10 +360,12 @@ const indiceSeleccionado = ref(null)
 
 const formulario = ref({
   cliente: '',
-  equipo: '',
+  marca: '',
+  modelo: '',
   tipoReparacion: '',
   tecnico: '',
   precio: 0,
+  abono: 0,
   metodoPago: '',
   estadoPago: '',
   estadoEquipo: '',
@@ -347,10 +395,12 @@ function obtenerFechaHoraActual() {
 function limpiarFormulario() {
   formulario.value = {
     cliente: '',
-    equipo: '',
+    marca: '',
+    modelo: '',
     tipoReparacion: '',
     tecnico: '',
     precio: 0,
+    abono: 0,
     metodoPago: 'Efectivo',
     estadoPago: 'Pendiente',
     estadoEquipo: 'Recibido',
@@ -367,15 +417,35 @@ function abrirModalNuevo() {
 function abrirModalEditar(index) {
   modoEdicion.value = true
   indiceSeleccionado.value = index
-  formulario.value = JSON.parse(JSON.stringify(servicios.value[index]))
+  const item = JSON.parse(JSON.stringify(servicios.value[index]))
+  formulario.value = {
+    ...item,
+    abono: item.abono || 0
+  }
   modalAbierto.value = true
+}
+
+function calcularSaldoPendiente(servicio) {
+  const precio = servicio.precio || 0
+  const abono = servicio.abono || 0
+  const resto = precio - abono
+  return resto > 0 ? resto : 0
 }
 
 function guardarServicio() {
   const datosLimpios = JSON.parse(JSON.stringify(formulario.value))
   datosLimpios.cliente = datosLimpios.cliente ? datosLimpios.cliente.trim() : ''
-  datosLimpios.equipo = datosLimpios.equipo ? datosLimpios.equipo.trim() : ''
-  
+  datosLimpios.marca = datosLimpios.marca ? datosLimpios.marca.trim() : ''
+  datosLimpios.modelo = datosLimpios.modelo ? datosLimpios.modelo.trim() : ''
+  datosLimpios.abono = datosLimpios.abono || 0
+
+  // Actualización automática de estado según montos
+  if (datosLimpios.abono >= datosLimpios.precio && datosLimpios.precio > 0) {
+    datosLimpios.estadoPago = 'Pagado'
+  } else if (datosLimpios.abono > 0) {
+    datosLimpios.estadoPago = 'Abono'
+  }
+
   if (modoEdicion.value) {
     servicios.value[indiceSeleccionado.value] = datosLimpios
   } else {
@@ -404,7 +474,8 @@ function servicioCumpleFiltro(servicio) {
   const q = busqueda.value.trim().toLowerCase()
   return (
     (servicio.cliente && servicio.cliente.toLowerCase().includes(q)) ||
-    (servicio.equipo && servicio.equipo.toLowerCase().includes(q)) ||
+    (servicio.marca && servicio.marca.toLowerCase().includes(q)) ||
+    (servicio.modelo && servicio.modelo.toLowerCase().includes(q)) ||
     (servicio.tecnico && servicio.tecnico.toLowerCase().includes(q))
   )
 }
