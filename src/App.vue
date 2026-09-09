@@ -283,9 +283,16 @@
                       label="Estado del Equipo *"
                       outlined
                       dense
-                      :rules="[val => !!val || 'Seleccione estado del equipo']"
+                      :rules="[
+                        val => !!val || 'Seleccione estado del equipo',
+                        val => (val !== 'Entregado' || (formulario.precio - (formulario.abono || 0)) <= 0) || 'No se puede entregar si el equipo no está totalmente pagado'
+                      ]"
                     />
                   </div>
+                </div>
+
+                <div v-if="(formulario.precio - (formulario.abono || 0)) > 0" class="text-caption text-negative text-weight-bold q-mb-xs">
+                  * El equipo debe estar totalmente pagado para cambiar su estado a "Entregado".
                 </div>
 
                 <q-input
@@ -330,9 +337,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
-const CLAVE_STORAGE = 'taller_don_efrain_servicios_v2'
+const CLAVE_STORAGE = 'taller_don_efrain_servicios_v3'
 
 function cargarDeLocalStorage() {
   const datosGuardados = localStorage.getItem(CLAVE_STORAGE)
@@ -387,6 +394,14 @@ const opcionesMetodoPago = ['Efectivo', 'Transferencia', 'Tarjeta']
 const opcionesEstadoPago = ['Pagado', 'Pendiente', 'Abono']
 const opcionesEstadoEquipo = ['Recibido', 'En reparación', 'Listo para entregar', 'Entregado']
 
+// Vigilante para revertir el estado del equipo si falta saldo
+watch([() => formulario.value.precio, () => formulario.value.abono], ([nuevoPrecio, nuevoAbono]) => {
+  const falta = (nuevoPrecio || 0) - (nuevoAbono || 0)
+  if (falta > 0 && formulario.value.estadoEquipo === 'Entregado') {
+    formulario.value.estadoEquipo = 'Listo para entregar'
+  }
+})
+
 function obtenerFechaHoraActual() {
   const ahora = new Date()
   return ahora.toISOString().slice(0, 10) + ' ' + ahora.toTimeString().slice(0, 5)
@@ -433,17 +448,25 @@ function calcularSaldoPendiente(servicio) {
 }
 
 function guardarServicio() {
+  const falta = (formulario.value.precio || 0) - (formulario.value.abono || 0)
+  
+  // Bloqueo de seguridad preventivo
+  if (falta > 0 && formulario.value.estadoEquipo === 'Entregado') {
+    return
+  }
+
   const datosLimpios = JSON.parse(JSON.stringify(formulario.value))
   datosLimpios.cliente = datosLimpios.cliente ? datosLimpios.cliente.trim() : ''
   datosLimpios.marca = datosLimpios.marca ? datosLimpios.marca.trim() : ''
   datosLimpios.modelo = datosLimpios.modelo ? datosLimpios.modelo.trim() : ''
   datosLimpios.abono = datosLimpios.abono || 0
 
-  // Actualización automática de estado según montos
   if (datosLimpios.abono >= datosLimpios.precio && datosLimpios.precio > 0) {
     datosLimpios.estadoPago = 'Pagado'
   } else if (datosLimpios.abono > 0) {
     datosLimpios.estadoPago = 'Abono'
+  } else {
+    datosLimpios.estadoPago = 'Pendiente'
   }
 
   if (modoEdicion.value) {
