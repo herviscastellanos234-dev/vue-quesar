@@ -161,7 +161,7 @@
                   label="Nombre del Cliente *"
                   outlined
                   dense
-                  :rules="[val => !!val || 'El nombre del cliente es obligatorio']"
+                  :rules="[val => (val && val.trim().length > 0) || 'El nombre del cliente es obligatorio']"
                 />
 
                 <q-input
@@ -170,7 +170,7 @@
                   outlined
                   dense
                   placeholder="Ej: iPhone 12, Samsung A15, Xiaomi Redmi Note 10"
-                  :rules="[val => !!val || 'La marca y modelo son obligatorios']"
+                  :rules="[val => (val && val.trim().length > 0) || 'La marca y modelo son obligatorios']"
                 />
 
                 <div class="row q-col-gutter-sm">
@@ -202,7 +202,7 @@
                   outlined
                   dense
                   placeholder="YYYY-MM-DD HH:mm"
-                  :rules="[val => !!val || 'La fecha y hora son obligatorias']"
+                  :rules="[val => (val && val.trim().length > 0) || 'La fecha y hora son obligatorias']"
                 />
 
                 <div class="row q-col-gutter-sm">
@@ -381,10 +381,14 @@ function abrirModalEditar(index) {
 }
 
 function guardarServicio() {
+  const datosLimpios = JSON.parse(JSON.stringify(formulario.value))
+  datosLimpios.cliente = datosLimpios.cliente ? datosLimpios.cliente.trim() : ''
+  datosLimpios.equipo = datosLimpios.equipo ? datosLimpios.equipo.trim() : ''
+  
   if (modoEdicion.value) {
-    servicios.value[indiceSeleccionado.value] = JSON.parse(JSON.stringify(formulario.value))
+    servicios.value[indiceSeleccionado.value] = datosLimpios
   } else {
-    servicios.value.push(JSON.parse(JSON.stringify(formulario.value)))
+    servicios.value.push(datosLimpios)
   }
   guardarEnLocalStorage()
   modalAbierto.value = false
@@ -404,12 +408,12 @@ function ejecutarEliminacion() {
 }
 
 function servicioCumpleFiltro(servicio) {
-  if (!busqueda.value) return true
-  const q = busqueda.value.toLowerCase()
+  if (!busqueda.value || !busqueda.value.trim()) return true
+  const q = busqueda.value.trim().toLowerCase()
   return (
-    servicio.cliente.toLowerCase().includes(q) ||
-    servicio.equipo.toLowerCase().includes(q) ||
-    servicio.tecnico.toLowerCase().includes(q)
+    (servicio.cliente && servicio.cliente.toLowerCase().includes(q)) ||
+    (servicio.equipo && servicio.equipo.toLowerCase().includes(q)) ||
+    (servicio.tecnico && servicio.tecnico.toLowerCase().includes(q))
   )
 }
 
