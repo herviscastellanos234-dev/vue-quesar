@@ -123,20 +123,6 @@
                     <span class="text-caption text-grey-7">({{ servicio.metodoPago }})</span>
                   </div>
 
-                  <!-- Calificación -->
-                  <div class="q-mt-xs row items-center">
-                    <span class="text-caption text-grey-8 q-mr-xs">Calificación:</span>
-                    <q-rating
-                      v-model="servicio.calificacion"
-                      max="5"
-                      size="1.2em"
-                      color="amber-8"
-                      icon="star_border"
-                      icon-selected="star"
-                      readonly
-                    />
-                  </div>
-
                   <div v-if="servicio.observaciones" class="q-mt-sm bg-grey-3 q-pa-xs rounded-borders text-caption text-grey-9">
                     <q-icon name="info" color="grey-7" class="q-mr-xs" />
                     <em>{{ servicio.observaciones }}</em>
@@ -265,18 +251,6 @@
                   </div>
                 </div>
 
-                <div class="q-py-xs">
-                  <div class="text-caption text-grey-8 text-weight-bold">Calificación del cliente (1 a 5 estrellas):</div>
-                  <q-rating
-                    v-model="formulario.calificacion"
-                    max="5"
-                    size="2.2em"
-                    color="amber-8"
-                    icon="star_border"
-                    icon-selected="star"
-                  />
-                </div>
-
                 <q-input
                   v-model="formulario.observaciones"
                   type="textarea"
@@ -357,7 +331,6 @@ const formulario = ref({
   metodoPago: '',
   estadoPago: '',
   estadoEquipo: '',
-  calificacion: 0,
   observaciones: ''
 })
 
@@ -390,7 +363,6 @@ function limpiarFormulario() {
     metodoPago: 'Efectivo',
     estadoPago: 'Pendiente',
     estadoEquipo: 'Recibido',
-    calificacion: 0,
     observaciones: ''
   }
 }
