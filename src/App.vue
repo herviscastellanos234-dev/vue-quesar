@@ -239,7 +239,10 @@
                       label="Abono ($)"
                       outlined
                       dense
-                      :rules="[val => (val === null || val === '' || val >= 0) || 'Abono inválido', val => val <= formulario.precio || 'El abono no puede superar el total']"
+                      :rules="[
+                        val => (val === null || val === '' || val >= 0) || 'Abono inválido',
+                        val => val <= formulario.precio || 'El abono no puede superar el total'
+                      ]"
                     />
                   </div>
                   <div class="col-12 col-sm-4">
@@ -279,20 +282,25 @@
                   <div class="col-12 col-sm-4">
                     <q-select
                       v-model="formulario.estadoEquipo"
-                      :options="opcionesEstadoEquipo"
+                      :options="opcionesEstadoEquipoFiltradas"
+                      option-value="value"
+                      option-label="label"
+                      option-disable="disable"
+                      emit-value
+                      map-options
                       label="Estado del Equipo *"
                       outlined
                       dense
                       :rules="[
                         val => !!val || 'Seleccione estado del equipo',
-                        val => (val !== 'Entregado' || (formulario.precio - (formulario.abono || 0)) <= 0) || 'No se puede entregar si el equipo no está totalmente pagado'
+                        val => (val !== 'Entregado' || (formulario.precio - (formulario.abono || 0)) <= 0) || 'No se puede entregar sin pagar'
                       ]"
                     />
                   </div>
                 </div>
 
                 <div v-if="(formulario.precio - (formulario.abono || 0)) > 0" class="text-caption text-negative text-weight-bold q-mb-xs">
-                  * El equipo debe estar totalmente pagado para cambiar su estado a "Entregado".
+                  * Opción "Entregado" bloqueada: El equipo debe ser pagado en su totalidad ($0 saldo pendiente) para ser entregado.
                 </div>
 
                 <q-input
@@ -337,9 +345,9 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 
-const CLAVE_STORAGE = 'taller_don_efrain_servicios_v3'
+const CLAVE_STORAGE = 'taller_don_efrain_servicios_v4'
 
 function cargarDeLocalStorage() {
   const datosGuardados = localStorage.getItem(CLAVE_STORAGE)
@@ -392,9 +400,23 @@ const opcionesReparacion = [
 const opcionesTecnicos = ['Don Efraín', 'Técnico 1', 'Técnico 2']
 const opcionesMetodoPago = ['Efectivo', 'Transferencia', 'Tarjeta']
 const opcionesEstadoPago = ['Pagado', 'Pendiente', 'Abono']
-const opcionesEstadoEquipo = ['Recibido', 'En reparación', 'Listo para entregar', 'Entregado']
 
-// Vigilante para revertir el estado del equipo si falta saldo
+// Opciones dinámicas para bloquear la entrega si falta saldo
+const opcionesEstadoEquipoFiltradas = computed(() => {
+  const faltaPagar = (formulario.value.precio || 0) - (formulario.value.abono || 0)
+  return [
+    { label: 'Recibido', value: 'Recibido', disable: false },
+    { label: 'En reparación', value: 'En reparación', disable: false },
+    { label: 'Listo para entregar', value: 'Listo para entregar', disable: false },
+    { 
+      label: faltaPagar > 0 ? 'Entregado (Requiere Pago Total)' : 'Entregado', 
+      value: 'Entregado', 
+      disable: faltaPagar > 0 
+    }
+  ]
+})
+
+// Revertir a "Listo para entregar" si reducen el abono y el equipo estaba marcado como "Entregado"
 watch([() => formulario.value.precio, () => formulario.value.abono], ([nuevoPrecio, nuevoAbono]) => {
   const falta = (nuevoPrecio || 0) - (nuevoAbono || 0)
   if (falta > 0 && formulario.value.estadoEquipo === 'Entregado') {
@@ -450,7 +472,7 @@ function calcularSaldoPendiente(servicio) {
 function guardarServicio() {
   const falta = (formulario.value.precio || 0) - (formulario.value.abono || 0)
   
-  // Bloqueo de seguridad preventivo
+  // Verificación estricta final
   if (falta > 0 && formulario.value.estadoEquipo === 'Entregado') {
     return
   }
